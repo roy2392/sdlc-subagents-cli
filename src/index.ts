@@ -56,10 +56,6 @@ function createSpinner(text: string) {
   };
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 // ---------------------------------------------------------------------------
 // Resolve template directory
 // ---------------------------------------------------------------------------
@@ -232,7 +228,6 @@ async function main() {
     }
   }
 
-  await sleep(800); // brief pause for visual effect
   stepSpinner.succeed(`Scanned ${bold(String(AGENTS.length))} coding agent CLIs`);
   console.log();
 
@@ -248,7 +243,6 @@ async function main() {
         `  ${red("○")} ${bold(agent.name)} ${dim(`(${agent.command})`)} ${red("not found")}`
       );
     }
-    await sleep(150); // staggered reveal
   }
 
   console.log();
@@ -272,7 +266,6 @@ async function main() {
   const orchestratorContent = readTemplate("skills/sdlc-orchestrator/SKILL.md");
   writeFile(targetDir, `${skillsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent);
   fileCount++;
-  await sleep(200);
 
   // Write all agent skills
   for (const agent of AGENTS) {
@@ -284,7 +277,6 @@ async function main() {
     process.stdout.write(
       `\r  ${cyan(SPINNER_FRAMES[fileCount % SPINNER_FRAMES.length])} Writing skill files... ${progressBar(fileCount, totalFiles)}`
     );
-    await sleep(200);
   }
 
   process.stdout.write(`\r\x1b[K`);
@@ -298,7 +290,6 @@ async function main() {
   const opencodeJson = generateOpencodeJson(targetDir, installed);
   const jsonResult = writeFile(targetDir, "opencode.json", opencodeJson);
 
-  await sleep(500);
   configSpinner.succeed(`${jsonResult === "created" ? "Created" : "Updated"} ${cyan("opencode.json")} with permissions & commands`);
 
   // ── Summary ────────────────────────────────────────────────────────────
