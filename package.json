@@ -1,0 +1,42 @@
+{
+  "name": "sdlc-subagents",
+  "version": "0.1.0",
+  "description": "Scaffold OpenCode as an orchestrator of multiple coding agent CLIs (Gemini, Copilot, Claude, Aider, Kimi, Cursor)",
+  "bin": {
+    "sdlc-subagents": "./dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "opencode",
+    "sdlc",
+    "ai-agents",
+    "coding-agents",
+    "gemini-cli",
+    "claude-code",
+    "aider",
+    "copilot",
+    "kimi",
+    "cursor",
+    "orchestrator"
+  ],
+  "author": "Roy Zalta",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
