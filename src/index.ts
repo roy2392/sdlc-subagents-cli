@@ -56,10 +56,6 @@ function createSpinner(text: string) {
   };
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 // ---------------------------------------------------------------------------
 // Resolve template directory
 // ---------------------------------------------------------------------------
@@ -99,14 +95,16 @@ function readTemplate(relativePath: string): string {
   return readFileSync(fullPath, "utf-8");
 }
 
-function writeFile(targetDir: string, relativePath: string, content: string) {
+function writeFile(targetDir: string, relativePath: string, content: string, dryRun = false) {
   const fullPath = join(targetDir, relativePath);
-  const dir = dirname(fullPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
   const existed = existsSync(fullPath);
-  writeFileSync(fullPath, content, "utf-8");
+  if (!dryRun) {
+    const dir = dirname(fullPath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    writeFileSync(fullPath, content, "utf-8");
+  }
   return existed ? "updated" : "created";
 }
 
@@ -212,9 +210,16 @@ function printBanner() {
 // ---------------------------------------------------------------------------
 async function main() {
   const targetDir = process.cwd();
+  const args = process.argv.slice(2);
+  const dryRun = args.includes("--dry-run");
 
   console.clear();
   printBanner();
+
+  if (dryRun) {
+    console.log(`  ${bold(yellow("DRY RUN"))} ${dim("— no files will be written")}`);
+    console.log();
+  }
 
   // ── Step 1: Detect installed CLIs ──────────────────────────────────────
   const stepSpinner = createSpinner("Scanning for installed coding agent CLIs...");
@@ -232,7 +237,6 @@ async function main() {
     }
   }
 
-  await sleep(800); // brief pause for visual effect
   stepSpinner.succeed(`Scanned ${bold(String(AGENTS.length))} coding agent CLIs`);
   console.log();
 
@@ -248,7 +252,6 @@ async function main() {
         `  ${red("○")} ${bold(agent.name)} ${dim(`(${agent.command})`)} ${red("not found")}`
       );
     }
-    await sleep(150); // staggered reveal
   }
 
   console.log();
@@ -270,46 +273,47 @@ async function main() {
 
   // Write orchestrator skill
   const orchestratorContent = readTemplate("skills/sdlc-orchestrator/SKILL.md");
-  writeFile(targetDir, `${skillsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent);
+  writeFile(targetDir, `${skillsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent, dryRun);
   fileCount++;
-  await sleep(200);
 
   // Write all agent skills
   for (const agent of AGENTS) {
     const content = readTemplate(`skills/${agent.id}/SKILL.md`);
-    writeFile(targetDir, `${skillsDir}/${agent.id}/SKILL.md`, content);
+    writeFile(targetDir, `${skillsDir}/${agent.id}/SKILL.md`, content, dryRun);
     fileCount++;
     // Update spinner text with progress
     fileSpinner.stop();
     process.stdout.write(
       `\r  ${cyan(SPINNER_FRAMES[fileCount % SPINNER_FRAMES.length])} Writing skill files... ${progressBar(fileCount, totalFiles)}`
     );
-    await sleep(200);
   }
 
   process.stdout.write(`\r\x1b[K`);
-  console.log(`  ${green("✔")} Created ${bold(String(totalFiles))} skill files in ${cyan(skillsDir + "/")}`);
+  const verb = dryRun ? "Would create" : "Created";
+  console.log(`  ${green("✔")} ${verb} ${bold(String(totalFiles))} skill files in ${cyan(skillsDir + "/")}`);
   console.log();
 
   // ── Step 3: Configure opencode.json ────────────────────────────────────
-  const configSpinner = createSpinner("Configuring opencode.json...");
+  const configSpinner = createSpinner(dryRun ? "Checking opencode.json..." : "Configuring opencode.json...");
   configSpinner.start();
 
   const opencodeJson = generateOpencodeJson(targetDir, installed);
-  const jsonResult = writeFile(targetDir, "opencode.json", opencodeJson);
+  const jsonResult = writeFile(targetDir, "opencode.json", opencodeJson, dryRun);
 
-  await sleep(500);
-  configSpinner.succeed(`${jsonResult === "created" ? "Created" : "Updated"} ${cyan("opencode.json")} with permissions & commands`);
+  const jsonVerb = dryRun
+    ? (jsonResult === "created" ? "Would create" : "Would update")
+    : (jsonResult === "created" ? "Created" : "Updated");
+  configSpinner.succeed(`${jsonVerb} ${cyan("opencode.json")} with permissions & commands`);
 
   // ── Summary ────────────────────────────────────────────────────────────
   console.log();
   console.log(
-    `  ${bold(green("✔ Setup complete!"))}`
+    `  ${bold(green(dryRun ? "✔ Dry run complete!" : "✔ Setup complete!"))}`
   );
   console.log();
 
   // Files created
-  console.log(dim("  ─── Files Created ───────────────────────────────────"));
+  console.log(dim(`  ─── Files ${dryRun ? "That Would Be Created" : "Created"} ──────────────────────────`));
   console.log();
   console.log(`  ${cyan("📁 .agents/skills/")}`);
   console.log(`     ${dim("├──")} ${cyan("sdlc-orchestrator/")} ${dim("← master routing skill")}`);

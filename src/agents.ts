@@ -27,14 +27,14 @@ export const AGENTS: SubAgent[] = [
   {
     id: "copilot-cli",
     name: "GitHub Copilot CLI",
-    command: "copilot",
-    installCommand: "npm install -g @github/copilot",
+    command: "gh copilot",
+    installCommand: "gh extension install github/gh-copilot",
     description:
       "GitHub's agentic coding CLI deeply integrated with GitHub workflows - PRs, issues, code review",
     bestFor:
       "GitHub workflow automation, PR creation and review, issue management, repository operations",
     nonInteractiveFlag: '--prompt "PROMPT"',
-    detectCommand: "copilot",
+    detectCommand: "gh",
   },
   {
     id: "claude-code",
@@ -53,7 +53,7 @@ export const AGENTS: SubAgent[] = [
     id: "aider",
     name: "Aider",
     command: "aider",
-    installCommand: "curl -LsSf https://aider.chat/install.sh | sh",
+    installCommand: "pipx install aider-chat",
     description:
       "Model-agnostic AI pair programming tool that works with any LLM and auto-commits changes to git",
     bestFor:
@@ -78,13 +78,13 @@ export const AGENTS: SubAgent[] = [
   {
     id: "cursor-cli",
     name: "Cursor CLI",
-    command: "agent",
-    installCommand: "curl https://cursor.sh/cli -fsS | bash",
+    command: "cursor",
+    installCommand: "Download from https://cursor.com, then: Cursor → Command Palette → Install 'cursor' command",
     description:
       "Cursor's terminal agent with full IDE-grade capabilities, cloud handoff, and multi-model support",
     bestFor:
       "IDE-grade coding in terminal, cloud agent delegation, rapid prototyping",
     nonInteractiveFlag: '-p "PROMPT"',
-    detectCommand: "agent",
+    detectCommand: "cursor",
   },
 ];
