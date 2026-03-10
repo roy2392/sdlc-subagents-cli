@@ -15,6 +15,50 @@ const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
 const red = (s: string) => `\x1b[31m${s}\x1b[0m`;
 const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
 const cyan = (s: string) => `\x1b[36m${s}\x1b[0m`;
+const magenta = (s: string) => `\x1b[35m${s}\x1b[0m`;
+const bgGreen = (s: string) => `\x1b[42m\x1b[30m${s}\x1b[0m`;
+const bgYellow = (s: string) => `\x1b[43m\x1b[30m${s}\x1b[0m`;
+const bgRed = (s: string) => `\x1b[41m\x1b[37m${s}\x1b[0m`;
+
+// ---------------------------------------------------------------------------
+// Spinner utility (zero deps)
+// ---------------------------------------------------------------------------
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+function createSpinner(text: string) {
+  let frame = 0;
+  let interval: ReturnType<typeof setInterval> | null = null;
+
+  return {
+    start() {
+      process.stdout.write("\x1b[?25l"); // hide cursor
+      interval = setInterval(() => {
+        const spinner = cyan(SPINNER_FRAMES[frame % SPINNER_FRAMES.length]);
+        process.stdout.write(`\r  ${spinner} ${text}`);
+        frame++;
+      }, 80);
+    },
+    succeed(msg: string) {
+      if (interval) clearInterval(interval);
+      process.stdout.write(`\r  ${green("✔")} ${msg}\x1b[K\n`);
+      process.stdout.write("\x1b[?25h"); // show cursor
+    },
+    fail(msg: string) {
+      if (interval) clearInterval(interval);
+      process.stdout.write(`\r  ${red("✖")} ${msg}\x1b[K\n`);
+      process.stdout.write("\x1b[?25h"); // show cursor
+    },
+    stop() {
+      if (interval) clearInterval(interval);
+      process.stdout.write("\x1b[?25h"); // show cursor
+      process.stdout.write("\x1b[K");
+    },
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 // ---------------------------------------------------------------------------
 // Resolve template directory
@@ -138,21 +182,43 @@ function mergeInstructions(
 }
 
 // ---------------------------------------------------------------------------
+// Progress bar
+// ---------------------------------------------------------------------------
+function progressBar(current: number, total: number, width = 20): string {
+  const filled = Math.round((current / total) * width);
+  const empty = width - filled;
+  const bar = "█".repeat(filled) + "░".repeat(empty);
+  const pct = Math.round((current / total) * 100);
+  return `${dim("[")}${green(bar)}${dim("]")} ${dim(`${pct}%`)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Banner
+// ---------------------------------------------------------------------------
+function printBanner() {
+  const banner = `
+  ${bold(cyan("╔══════════════════════════════════════════════════╗"))}
+  ${bold(cyan("║"))}                                                  ${bold(cyan("║"))}
+  ${bold(cyan("║"))}   ${bold("⚡ SDLC Sub-Agents")}                             ${bold(cyan("║"))}
+  ${bold(cyan("║"))}   ${dim("Multi-Agent Orchestrator for OpenCode")}           ${bold(cyan("║"))}
+  ${bold(cyan("║"))}                                                  ${bold(cyan("║"))}
+  ${bold(cyan("╚══════════════════════════════════════════════════╝"))}
+`;
+  console.log(banner);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
   const targetDir = process.cwd();
 
-  console.log();
-  console.log(
-    bold("  SDLC Sub-Agents") +
-      dim(" — Configure OpenCode as an orchestrator of coding agent CLIs")
-  );
-  console.log();
+  console.clear();
+  printBanner();
 
-  // 1. Detect installed CLIs
-  console.log(dim("  Detecting installed coding agent CLIs..."));
-  console.log();
+  // ── Step 1: Detect installed CLIs ──────────────────────────────────────
+  const stepSpinner = createSpinner("Scanning for installed coding agent CLIs...");
+  stepSpinner.start();
 
   const installed = detectInstalledAgents();
   const found: SubAgent[] = [];
@@ -161,113 +227,141 @@ async function main() {
   for (const agent of AGENTS) {
     if (installed.get(agent.id)) {
       found.push(agent);
-      console.log(
-        `  ${green("+")} ${bold(agent.name)} ${dim(`(${agent.command})`)}`
-      );
     } else {
       missing.push(agent);
-      console.log(
-        `  ${red("-")} ${bold(agent.name)} ${dim("not found")} ${dim(`— install: ${agent.installCommand}`)}`
-      );
     }
   }
 
-  console.log();
-  console.log(
-    `  ${green(String(found.length))} detected, ${yellow(String(missing.length))} not found`
-  );
+  await sleep(800); // brief pause for visual effect
+  stepSpinner.succeed(`Scanned ${bold(String(AGENTS.length))} coding agent CLIs`);
   console.log();
 
-  // 2. Write skill files
-  console.log(dim("  Writing skill files..."));
-
-  const skillsDir = ".agents/skills";
-
-  // Write orchestrator skill (always)
-  const orchestratorContent = readTemplate(
-    "skills/sdlc-orchestrator/SKILL.md"
-  );
-  const orchResult = writeFile(
-    targetDir,
-    `${skillsDir}/sdlc-orchestrator/SKILL.md`,
-    orchestratorContent
-  );
-  console.log(
-    `  ${green("+")} ${orchResult} ${cyan(`${skillsDir}/sdlc-orchestrator/SKILL.md`)}`
-  );
-
-  // Write all agent skills (even for missing CLIs — user may install later)
+  // Print detection results with staggered output
   for (const agent of AGENTS) {
-    const content = readTemplate(`skills/${agent.id}/SKILL.md`);
-    const result = writeFile(
-      targetDir,
-      `${skillsDir}/${agent.id}/SKILL.md`,
-      content
-    );
-    const status = installed.get(agent.id)
-      ? green("+")
-      : yellow("~");
-    console.log(
-      `  ${status} ${result} ${cyan(`${skillsDir}/${agent.id}/SKILL.md`)}`
-    );
+    const isInstalled = installed.get(agent.id);
+    if (isInstalled) {
+      console.log(
+        `  ${green("●")} ${bold(agent.name)} ${dim(`(${agent.command})`)} ${green("installed")}`
+      );
+    } else {
+      console.log(
+        `  ${red("○")} ${bold(agent.name)} ${dim(`(${agent.command})`)} ${red("not found")}`
+      );
+    }
+    await sleep(150); // staggered reveal
   }
 
-  // 3. Write/update opencode.json
   console.log();
-  console.log(dim("  Configuring opencode.json..."));
+  const summaryParts = [];
+  if (found.length > 0)
+    summaryParts.push(bgGreen(` ${found.length} found `));
+  if (missing.length > 0)
+    summaryParts.push(bgYellow(` ${missing.length} missing `));
+  console.log(`  ${summaryParts.join("  ")}`);
+  console.log();
+
+  // ── Step 2: Write skill files ──────────────────────────────────────────
+  const totalFiles = AGENTS.length + 1; // +1 for orchestrator
+  let fileCount = 0;
+
+  const skillsDir = ".agents/skills";
+  const fileSpinner = createSpinner("Writing skill files...");
+  fileSpinner.start();
+
+  // Write orchestrator skill
+  const orchestratorContent = readTemplate("skills/sdlc-orchestrator/SKILL.md");
+  writeFile(targetDir, `${skillsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent);
+  fileCount++;
+  await sleep(200);
+
+  // Write all agent skills
+  for (const agent of AGENTS) {
+    const content = readTemplate(`skills/${agent.id}/SKILL.md`);
+    writeFile(targetDir, `${skillsDir}/${agent.id}/SKILL.md`, content);
+    fileCount++;
+    // Update spinner text with progress
+    fileSpinner.stop();
+    process.stdout.write(
+      `\r  ${cyan(SPINNER_FRAMES[fileCount % SPINNER_FRAMES.length])} Writing skill files... ${progressBar(fileCount, totalFiles)}`
+    );
+    await sleep(200);
+  }
+
+  process.stdout.write(`\r\x1b[K`);
+  console.log(`  ${green("✔")} Created ${bold(String(totalFiles))} skill files in ${cyan(skillsDir + "/")}`);
+  console.log();
+
+  // ── Step 3: Configure opencode.json ────────────────────────────────────
+  const configSpinner = createSpinner("Configuring opencode.json...");
+  configSpinner.start();
 
   const opencodeJson = generateOpencodeJson(targetDir, installed);
   const jsonResult = writeFile(targetDir, "opencode.json", opencodeJson);
-  console.log(`  ${green("+")} ${jsonResult} ${cyan("opencode.json")}`);
 
-  // 4. Summary
+  await sleep(500);
+  configSpinner.succeed(`${jsonResult === "created" ? "Created" : "Updated"} ${cyan("opencode.json")} with permissions & commands`);
+
+  // ── Summary ────────────────────────────────────────────────────────────
   console.log();
-  console.log(bold("  Done!") + " Your project is now configured.");
-  console.log();
-  console.log(dim("  What was created:"));
   console.log(
-    `  ${dim("1.")} ${cyan(`${skillsDir}/sdlc-orchestrator/SKILL.md`)} ${dim("— master routing skill")}`
+    `  ${bold(green("✔ Setup complete!"))}`
   );
-  for (const agent of AGENTS) {
+  console.log();
+
+  // Files created
+  console.log(dim("  ─── Files Created ───────────────────────────────────"));
+  console.log();
+  console.log(`  ${cyan("📁 .agents/skills/")}`);
+  console.log(`     ${dim("├──")} ${cyan("sdlc-orchestrator/")} ${dim("← master routing skill")}`);
+  for (let i = 0; i < AGENTS.length; i++) {
+    const agent = AGENTS[i];
+    const isLast = i === AGENTS.length - 1;
+    const prefix = isLast ? "└──" : "├──";
+    const status = installed.get(agent.id)
+      ? green("●")
+      : yellow("○");
     console.log(
-      `  ${dim("  ")} ${cyan(`${skillsDir}/${agent.id}/SKILL.md`)} ${dim(`— ${agent.bestFor.split(",")[0]}`)}`
+      `     ${dim(prefix)} ${status} ${cyan(`${agent.id}/`)} ${dim(`← ${agent.bestFor.split(",")[0].trim()}`)}`
     );
   }
-  console.log(
-    `  ${dim("2.")} ${cyan("opencode.json")} ${dim("— permissions + /delegate commands")}`
-  );
+  console.log();
+  console.log(`  ${cyan("📄 opencode.json")} ${dim("← permissions + /delegate commands")}`);
 
+  // Usage
   console.log();
-  console.log(bold("  Usage in OpenCode:"));
-  console.log(
-    `  ${dim(">")} OpenCode will automatically discover the skills and`
-  );
-  console.log(
-    `    know how to delegate to each sub-agent based on task type.`
-  );
+  console.log(dim("  ─── Usage ───────────────────────────────────────────"));
   console.log();
-  console.log(`  ${dim(">")} You can also use custom commands:`);
-  console.log(
-    `    ${cyan("/delegate")} ${dim("auto-route to best agent")}`
-  );
+  console.log(`  OpenCode auto-discovers skills and routes tasks to agents.`);
+  console.log();
+  console.log(`  ${bold("Commands:")}`);
+  console.log(`    ${cyan("/delegate")} ${dim("............")} auto-route to best agent`);
   for (const agent of AGENTS) {
+    const pad = ".".repeat(Math.max(1, 20 - agent.id.length));
     console.log(
-      `    ${cyan(`/delegate-${agent.id}`)} ${dim(`force ${agent.name}`)}`
+      `    ${cyan(`/delegate-${agent.id}`)} ${dim(pad)} ${dim(agent.name)}`
     );
   }
 
+  // Missing CLIs with install commands
   if (missing.length > 0) {
     console.log();
-    console.log(yellow("  Missing CLIs (install when ready):"));
+    console.log(dim("  ─── Install Missing CLIs ────────────────────────────"));
+    console.log();
     for (const agent of missing) {
+      console.log(`  ${yellow("▸")} ${bold(agent.name)}`);
       console.log(`    ${dim("$")} ${agent.installCommand}`);
+      console.log();
     }
+    console.log(
+      dim("  Run this command again after installing to update detection.")
+    );
   }
 
   console.log();
 }
 
 main().catch((err) => {
+  process.stdout.write("\x1b[?25h"); // ensure cursor is shown on error
   console.error(red(`Error: ${err instanceof Error ? err.message : err}`));
   process.exit(1);
 });

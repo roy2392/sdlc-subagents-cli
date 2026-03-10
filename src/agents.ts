@@ -53,7 +53,7 @@ export const AGENTS: SubAgent[] = [
     id: "aider",
     name: "Aider",
     command: "aider",
-    installCommand: "pipx install aider-chat",
+    installCommand: "curl -LsSf https://aider.chat/install.sh | sh",
     description:
       "Model-agnostic AI pair programming tool that works with any LLM and auto-commits changes to git",
     bestFor:
