@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -66,6 +66,7 @@ function sleep(ms: number): Promise<void> {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const TEMPLATES_DIR = resolve(__dirname, "..", "templates");
+const COMMANDS_DIR = resolve(__dirname, "..", "commands");
 
 // ---------------------------------------------------------------------------
 // CLI detection helpers
@@ -97,6 +98,15 @@ function detectInstalledAgents(): Map<string, boolean> {
 function readTemplate(relativePath: string): string {
   const fullPath = join(TEMPLATES_DIR, relativePath);
   return readFileSync(fullPath, "utf-8");
+}
+
+function readCommand(filename: string): string {
+  const fullPath = join(COMMANDS_DIR, filename);
+  return readFileSync(fullPath, "utf-8");
+}
+
+function listCommands(): string[] {
+  return readdirSync(COMMANDS_DIR).filter((f) => f.endsWith(".md"));
 }
 
 function writeFile(targetDir: string, relativePath: string, content: string) {
@@ -260,35 +270,58 @@ async function main() {
   console.log(`  ${summaryParts.join("  ")}`);
   console.log();
 
-  // ── Step 2: Write skill files ──────────────────────────────────────────
-  const totalFiles = AGENTS.length + 1; // +1 for orchestrator
+  // ── Step 2: Write agent skill files ─────────────────────────────────
+  const totalAgentFiles = AGENTS.length + 1; // +1 for orchestrator
   let fileCount = 0;
 
-  const skillsDir = ".agents/skills";
-  const fileSpinner = createSpinner("Writing skill files...");
+  const agentsDir = ".opencode/agents";
+  const fileSpinner = createSpinner("Writing agent skill files...");
   fileSpinner.start();
 
   // Write orchestrator skill
   const orchestratorContent = readTemplate("skills/sdlc-orchestrator/SKILL.md");
-  writeFile(targetDir, `${skillsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent);
+  writeFile(targetDir, `${agentsDir}/sdlc-orchestrator/SKILL.md`, orchestratorContent);
   fileCount++;
   await sleep(200);
 
   // Write all agent skills
   for (const agent of AGENTS) {
     const content = readTemplate(`skills/${agent.id}/SKILL.md`);
-    writeFile(targetDir, `${skillsDir}/${agent.id}/SKILL.md`, content);
+    writeFile(targetDir, `${agentsDir}/${agent.id}/SKILL.md`, content);
     fileCount++;
     // Update spinner text with progress
     fileSpinner.stop();
     process.stdout.write(
-      `\r  ${cyan(SPINNER_FRAMES[fileCount % SPINNER_FRAMES.length])} Writing skill files... ${progressBar(fileCount, totalFiles)}`
+      `\r  ${cyan(SPINNER_FRAMES[fileCount % SPINNER_FRAMES.length])} Writing agent skill files... ${progressBar(fileCount, totalAgentFiles)}`
     );
     await sleep(200);
   }
 
   process.stdout.write(`\r\x1b[K`);
-  console.log(`  ${green("✔")} Created ${bold(String(totalFiles))} skill files in ${cyan(skillsDir + "/")}`);
+  console.log(`  ${green("✔")} Created ${bold(String(totalAgentFiles))} agent skill files in ${cyan(agentsDir + "/")}`);
+  console.log();
+
+  // ── Step 2b: Write command files ───────────────────────────────────────
+  const commandFiles = listCommands();
+  const commandsDir = ".opencode/commands";
+  let cmdCount = 0;
+
+  const cmdSpinner = createSpinner("Writing command files...");
+  cmdSpinner.start();
+
+  for (const cmdFile of commandFiles) {
+    const content = readCommand(cmdFile);
+    writeFile(targetDir, `${commandsDir}/${cmdFile}`, content);
+    cmdCount++;
+    cmdSpinner.stop();
+    process.stdout.write(
+      `\r  ${cyan(SPINNER_FRAMES[cmdCount % SPINNER_FRAMES.length])} Writing command files... ${progressBar(cmdCount, commandFiles.length)}`
+    );
+    await sleep(150);
+  }
+
+  process.stdout.write(`\r\x1b[K`);
+  console.log(`  ${green("✔")} Created ${bold(String(cmdCount))} command files in ${cyan(commandsDir + "/")}`);
   console.log();
 
   // ── Step 3: Configure opencode.json ────────────────────────────────────
@@ -311,7 +344,7 @@ async function main() {
   // Files created
   console.log(dim("  ─── Files Created ───────────────────────────────────"));
   console.log();
-  console.log(`  ${cyan("📁 .agents/skills/")}`);
+  console.log(`  ${cyan("📁 .opencode/agents/")}`);
   console.log(`     ${dim("├──")} ${cyan("sdlc-orchestrator/")} ${dim("← master routing skill")}`);
   for (let i = 0; i < AGENTS.length; i++) {
     const agent = AGENTS[i];
@@ -323,6 +356,15 @@ async function main() {
     console.log(
       `     ${dim(prefix)} ${status} ${cyan(`${agent.id}/`)} ${dim(`← ${agent.bestFor.split(",")[0].trim()}`)}`
     );
+  }
+  console.log();
+  console.log(`  ${cyan("📁 .opencode/commands/")}`);
+  const cmdFileList = listCommands();
+  for (let i = 0; i < cmdFileList.length; i++) {
+    const isLast = i === cmdFileList.length - 1;
+    const prefix = isLast ? "└──" : "├──";
+    const name = cmdFileList[i].replace(".md", "");
+    console.log(`     ${dim(prefix)} ${cyan(cmdFileList[i])} ${dim(`← /${name}`)}`);
   }
   console.log();
   console.log(`  ${cyan("📄 opencode.json")} ${dim("← permissions + /delegate commands")}`);

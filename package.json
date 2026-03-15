@@ -28,7 +28,8 @@
   "license": "MIT",
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "commands"
   ],
   "engines": {
     "node": ">=18"
