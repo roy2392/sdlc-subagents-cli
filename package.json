@@ -29,7 +29,8 @@
   "files": [
     "dist",
     "templates",
-    "commands"
+    "commands",
+    "agents"
   ],
   "engines": {
     "node": ">=18"

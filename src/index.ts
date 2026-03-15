@@ -67,6 +67,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const TEMPLATES_DIR = resolve(__dirname, "..", "templates");
 const COMMANDS_DIR = resolve(__dirname, "..", "commands");
+const AGENTS_MD_DIR = resolve(__dirname, "..", "agents");
 
 // ---------------------------------------------------------------------------
 // CLI detection helpers
@@ -107,6 +108,15 @@ function readCommand(filename: string): string {
 
 function listCommands(): string[] {
   return readdirSync(COMMANDS_DIR).filter((f) => f.endsWith(".md"));
+}
+
+function readAgentMd(filename: string): string {
+  const fullPath = join(AGENTS_MD_DIR, filename);
+  return readFileSync(fullPath, "utf-8");
+}
+
+function listAgentMds(): string[] {
+  return readdirSync(AGENTS_MD_DIR).filter((f) => f.endsWith(".md"));
 }
 
 function writeFile(targetDir: string, relativePath: string, content: string) {
@@ -297,8 +307,16 @@ async function main() {
     await sleep(200);
   }
 
+  // Write agent definition md files (codebase-mapper, researcher, etc.)
+  const agentMdFiles = listAgentMds();
+  for (const mdFile of agentMdFiles) {
+    const content = readAgentMd(mdFile);
+    writeFile(targetDir, `${agentsDir}/${mdFile}`, content);
+    fileCount++;
+  }
+
   process.stdout.write(`\r\x1b[K`);
-  console.log(`  ${green("✔")} Created ${bold(String(totalAgentFiles))} agent skill files in ${cyan(agentsDir + "/")}`);
+  console.log(`  ${green("✔")} Created ${bold(String(totalAgentFiles + agentMdFiles.length))} agent files in ${cyan(agentsDir + "/")}`);
   console.log();
 
   // ── Step 2b: Write command files ───────────────────────────────────────
@@ -346,16 +364,20 @@ async function main() {
   console.log();
   console.log(`  ${cyan("📁 .opencode/agents/")}`);
   console.log(`     ${dim("├──")} ${cyan("sdlc-orchestrator/")} ${dim("← master routing skill")}`);
-  for (let i = 0; i < AGENTS.length; i++) {
-    const agent = AGENTS[i];
-    const isLast = i === AGENTS.length - 1;
-    const prefix = isLast ? "└──" : "├──";
+  for (const agent of AGENTS) {
     const status = installed.get(agent.id)
       ? green("●")
       : yellow("○");
     console.log(
-      `     ${dim(prefix)} ${status} ${cyan(`${agent.id}/`)} ${dim(`← ${agent.bestFor.split(",")[0].trim()}`)}`
+      `     ${dim("├──")} ${status} ${cyan(`${agent.id}/`)} ${dim(`← ${agent.bestFor.split(",")[0].trim()}`)}`
     );
+  }
+  const agentMdList = listAgentMds();
+  for (let i = 0; i < agentMdList.length; i++) {
+    const isLast = i === agentMdList.length - 1;
+    const prefix = isLast ? "└──" : "├──";
+    const name = agentMdList[i].replace(".md", "");
+    console.log(`     ${dim(prefix)} ${cyan(agentMdList[i])} ${dim(`← @${name} subagent`)}`);
   }
   console.log();
   console.log(`  ${cyan("📁 .opencode/commands/")}`);
