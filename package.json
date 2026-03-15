@@ -1,6 +1,6 @@
 {
   "name": "sdlc-subagents",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Scaffold OpenCode as an orchestrator of multiple coding agent CLIs (Gemini, Copilot, Claude, Aider, Kimi, Cursor)",
   "bin": {
     "sdlc-subagents": "dist/index.js"
