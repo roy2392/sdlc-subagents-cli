@@ -23,7 +23,7 @@ npx sdlc-subagents
 
 <br />
 
-[Quick Start](#-quick-start) · [Supported Agents](#-supported-agents) · [How It Works](#-how-it-works) · [Usage](#-usage-in-opencode) · [Install CLIs](#-installing-the-sub-agent-clis)
+[Quick Start](#-quick-start) · [Supported Agents](#-supported-agents) · [How It Works](#-how-it-works) · [Usage](#-usage-in-opencode) · [PIV Workflow](#agentic-coding-workflow--the-piv-loop) · [Install CLIs](#-installing-the-sub-agent-clis)
 
 </div>
 
@@ -166,6 +166,125 @@ Chain agents for complex SDLC workflows:
 3. /delegate-kimi-cli     Build the login UI components
 4. /delegate-aider        Add integration tests, commit each one
 5. /delegate-copilot-cli  Create a PR with a detailed description
+```
+
+---
+
+## Agentic Coding Workflow — The PIV Loop
+
+This section explains how to use the built-in commands to follow a structured, repeatable workflow for building production-grade software with AI coding agents. The approach is based on creating an **AI layer** — a set of documents and rules that provide persistent context to the agent — and then iterating through a **Plan-Implement-Validate (PIV)** loop for each feature.
+
+### Why This Workflow?
+
+| Concept | Purpose |
+|:--------|:--------|
+| **Prime command** | Aligns the agent on the current state of the project — what's been built, what the goals are, and what should happen next. Without priming, the agent starts blind every session. |
+| **PIV loop** | Breaks development into small, testable cycles. Each loop produces a planned, implemented, and validated feature with a clean commit — reducing risk and keeping the agent focused. |
+| **System evolution** | Bugs and bad assumptions become feedback. Updating global rules and context files makes the agent smarter over time, turning mistakes into permanent improvements. |
+
+---
+
+### Stage 1: Initial Project Setup
+
+Before entering the PIV loop, set up the AI layer that gives your agent persistent context.
+
+1. **Define the Idea** — Have a raw conversation with the agent about your project idea, tech stack, and goals.
+2. **Generate a PRD** — Run a command to produce a structured Product Requirements Document covering scope, features, and technical details.
+3. **Establish Global Rules** — Run a command to create global rules defining constraints, conventions, naming patterns, and testing strategies for the codebase.
+4. **Set Up On-Demand Context** — Create reference files (e.g. `components.md`, `api.md`) for specific tasks. These are loaded only when needed to save context space.
+
+---
+
+### Stage 2: The Command Workflow (Prime → E2E)
+
+Once the AI layer is in place, follow this command sequence for each feature or phase. This is the PIV loop in action.
+
+#### Step 1 — `/prime`
+
+> Start every new session here.
+
+The agent explores the codebase, reads existing documentation (PRD, global rules), checks the git log for history, and builds a mental model of the project's current state. This ensures it knows what has been built and what needs to happen next.
+
+```
+/prime
+```
+
+#### Step 2 — `/plan_feature`
+
+> Break the work into granular, manageable tasks.
+
+The agent generates a structured implementation plan for the next feature or phase. The plan includes a detailed task list, identifies necessary context files, and defines success criteria.
+
+```
+/plan_feature
+```
+
+#### Step 3 — `/execute`
+
+> Delegate the implementation to the agent.
+
+The agent takes the structured plan and writes the code — handling database migrations, environment variables, and all implementation details based on the plan.
+
+```
+/execute ./PATH-TO-YOUR-PRD.MD-FILE
+```
+
+#### Step 4 — `/test_e2e`
+
+> Validate the feature against real user journeys.
+
+The agent runs end-to-end tests that simulate real user interactions (e.g. creating an account, navigating flows). This ensures the new feature works correctly in the context of the full application.
+
+```
+/test_e2e
+```
+
+#### Step 5 — Human Review
+
+> Manually review the code and test in a browser before committing.
+
+This is the only step that isn't a command. Review the diff, run the app, and verify it works as expected.
+
+#### Step 6 — `/commit`
+
+> Document progress and build long-term memory.
+
+Creates a standardized commit message based on the work done. Future `/prime` sessions read the git log, so clean commit messages serve as long-term memory for the project.
+
+```
+/commit
+```
+
+---
+
+### Stage 3: Evolving the System
+
+The AI layer is not static. Improve it based on experience:
+
+- **When bugs occur** — update global rules or add new on-demand context files so the agent avoids the same mistake.
+- **When the agent makes poor assumptions** — refine the PRD, commands, or rules to better align with your coding style.
+- **Over time** — the system becomes more reliable as you encode more project knowledge into the AI layer.
+
+---
+
+### Command Execution Order (Summary)
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   PIV Loop                          │
+│                                                     │
+│   /prime  →  /plan_feature  →  /execute             │
+│                                    │                │
+│                              /test_e2e              │
+│                                    │                │
+│                            Human Review             │
+│                                    │                │
+│                               /commit               │
+│                                    │                │
+│                          ┌─────────┘                │
+│                          ▼                          │
+│                   Next feature?  ──→  /prime again  │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
