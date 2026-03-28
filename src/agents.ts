@@ -79,7 +79,7 @@ export const AGENTS: SubAgent[] = [
     id: "cursor-cli",
     name: "Cursor CLI",
     command: "agent",
-    installCommand: "curl https://cursor.sh/cli -fsS | bash",
+    installCommand: "curl https://cursor.com/install -fsS | bash",
     description:
       "Cursor's terminal agent with full IDE-grade capabilities, cloud handoff, and multi-model support",
     bestFor:

@@ -64,7 +64,7 @@ You have access to multiple AI coding agents — Gemini, Claude, Copilot, Aider,
 | <img src="https://mintlify.s3.us-west-1.amazonaws.com/anthropic/logo/light.svg" width="16" />&nbsp; [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) | `claude` | Complex refactoring, architecture changes, debugging | `npm i -g @anthropic-ai/claude-code` |
 | <img src="https://aider.chat/assets/icons/favicon-32x32.png" width="16" />&nbsp; [Aider](https://aider.chat) | `aider` | Pair programming, auto-commits, any LLM provider | `pipx install aider-chat` |
 | <img src="https://raw.githubusercontent.com/nicepkg/gpt-runner/main/docs/public/logo.svg" width="16" />&nbsp; [Kimi CLI](https://github.com/MoonshotAI/kimi-cli) | `kimi` | Front-end development, UI components, long-context | `uv tool install --python 3.13 kimi-cli` |
-| <img src="https://cursor.sh/favicon.ico" width="16" />&nbsp; [Cursor CLI](https://cursor.sh) | `agent` | IDE-grade coding, cloud handoff, rapid prototyping | `curl https://cursor.sh/cli -fsS \| bash` |
+| <img src="https://cursor.sh/favicon.ico" width="16" />&nbsp; [Cursor CLI](https://cursor.sh) | `agent` | IDE-grade coding, cloud handoff, rapid prototyping | `curl https://cursor.com/install -fsS \| bash` |
 
 ---
 
@@ -324,7 +324,7 @@ pipx install aider-chat
 uv tool install --python 3.13 kimi-cli
 
 # Cursor CLI — IDE-grade terminal agent
-curl https://cursor.sh/cli -fsS | bash
+curl https://cursor.com/install -fsS | bash
 ```
 
 ---
