@@ -71,7 +71,7 @@ agent resume
 
 ## Important notes
 
-- Install via `curl https://cursor.sh/cli -fsS | bash`
+- Install via `curl https://cursor.com/install -fsS | bash`
 - Requires a Cursor subscription for authentication
 - The CLI command is `agent` (NOT `cursor`)
 - Still in beta - some features may change
